@@ -178,11 +178,14 @@ def solve_kidnap(orig_scan_img, map_image, min_distance, map_resolution = 0.05, 
 
 
     #Converting map position to meter coords in map frame of ROS.
-    map_origin = np.array([-7.47, -5.27]) # Find the origin values from map .yaml file.
+    map_origin = np.array([-12.5, -12.5]) # Find the origin values from map .yaml file.
     map_resolution = 0.05                 # Find the resolution from map .yaml file.
 
     robot_in_map_pixels = robot_on_map.copy()
+    print("Robot in map pixels before flip:", robot_in_map_pixels.copy())
     robot_in_map_pixels[1] = map_image.shape[0] - robot_in_map_pixels[1] #flip y axis
+   
+    print("Robot in map pixels after flip:", robot_in_map_pixels.copy())
     robot_in_map_meters = robot_in_map_pixels * map_resolution + map_origin
     robot_angle_in_map = math.radians(-best_theta_degrees)
 
