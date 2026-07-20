@@ -198,10 +198,10 @@ The evaluation follows the standard kidnapped robot protocol.
 
 # Experimental Results
 
-## Generated Map
+## World map
 
 <p align="center">
-<img src="media/screenshots/generated_map.png" width="700">
+<img src="media/screenshots/world.png" width="700">
 </p>
 
 ---
@@ -209,7 +209,7 @@ The evaluation follows the standard kidnapped robot protocol.
 ## Localization
 
 <p align="center">
-<img src="media/screenshots/localization.png" width="700">
+<img src="media/screenshots/sim-result.png" width="700">
 </p>
 
 ---
