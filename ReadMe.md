@@ -1,61 +1,309 @@
-# Global Localizer / Kidnap pose solver
+# LiDAR Global Relocalization
+### Robust Kidnapped Robot Recovery using LiDAR Scan Descriptor Matching
 
-This ROS2 package is dedicated to estimate the position of a 'kidnapped' mobile robot in a given map. This package will find estimate the robot's current position in the map, by matching the features in the lidar-scan with the map's features. The output of this package can be used to give initial pose estimate to other localizers like AMCL.
+> Developed and extensively extended during my Robotics Internship at **ugo Inc., Tokyo, Japan**
 
-![GIF File 1](/media/output1.gif)
+![ROS2](https://img.shields.io/badge/ROS2-Humble-blue)
+![Gazebo](https://img.shields.io/badge/Gazebo-Classic-orange)
+![Python](https://img.shields.io/badge/Python-3.10-green)
+![Platform](https://img.shields.io/badge/Platform-Ubuntu%2022.04-lightgrey)
 
- Assuming the robot is equipped with a 2d Lidar scanner, this package takes following inputs:
-- Map image (.png).
-- Current lidar scan (from a published topic: "/scan" by default)
+---
 
-## Description
-This package contains works on an innovative approach to estimate the position of a kidnapped robot in a 2d map. It uses following approach:
-- Read map_image.
-- Take lastest 2d lidar scan from the robot, create a scan_image (keeping lidar at the center)
-- 'Simulate' scans on the map: Use the map-image and lidar parameters to simulate scans on different positions on the map (using ray-casting), i.e. how the scan would look like if the robot is present at that specific position (by using map_image).
-- Compare those simulated scans with original scan_image, find ORB features using openCV, match them and find the transform between simulated & original scan.
-- Align the simulated and original scan with the previously found affine transformation.
-- Find the best 'aligning' simulated scan with the original scan using F1 score metric.
-- Use the best aligned simulated scan to then calculate the position of the robot on the map.
+# Overview
 
-Currently, the output is **Uni-modal** (it will give the highest probable position of the robot). But I will further make it **multi-modal** (to give multiple position estimates if there are similar locations in the map.)
+This repository implements a **LiDAR-based global relocalization system** capable of recovering a robot from an unknown position after a kidnapped robot event.
 
-Instead of taking random points on the map (as candidate positions), this package uses an optimized approach. It gets the distance to the closest obstacle from the lidar scan, and selects ONLY the area on the map which has almost similar distance to nearest obstacle pixels. Then we select the candidates by adaptive randomized selection. It helps us to reduce the search area by a big factor, so we get very good results in very few iterations.
+The work is based on the original scan descriptor localization framework by **Saad Waqar**, and was significantly extended during my internship to support a realistic indoor service robot workflow.
 
-## Installation
+Major modifications include
 
-This package was developed and tested on ROS2 Humble:
+- Migration to AWS Small House World
+- New occupancy maps
+- Updated localization configuration
+- Improved launch pipeline
+- Parameter tuning
+- Extensive kidnapped robot evaluation
+- Documentation and visualization
+- Experimental analysis
 
-1. Clone the repository & build the workspace after adding the correct configurations in config.yaml file.
+---
 
-## Usage
+# Problem Statement
 
-To use the Global Localizer package, follow these steps:
+Localization systems relying only on odometry or local scan matching fail when the robot is physically moved without updating odometry (Kidnapped Robot Problem).
 
-1. Add the "absolute" path to map-image (in image formats e.g. png) in the config.yaml file, and rebuild the package.
-2. Launch the simulated/real robot, make sure the /scan topic is publishing the current scan.
-3. Initialize the localization service: 'ros2 run global_localizer global_localizer'
-4. The service would be ready, you can call the kidnap solving solution by: 'ros2 service call /global_localization_srv std_srvs/srv/Empty'
-5. It will run the iterations and find the best, probable position for the kidnapped robot. 
+The objective of this project is to
 
-## Demo
+- detect the correct global location using only LiDAR observations,
+- estimate the global pose,
+- recover localization without resetting odometry,
+- continue normal navigation.
 
-![demo-1](/media/output2.gif)
+---
 
-![demo-2](/media/output3.gif)
+# Localization Pipeline
 
-## Closer look
+```
+                Laser Scan
+                     │
+                     ▼
+          Scan Descriptor Generation
+                     │
+                     ▼
+         Descriptor Database Matching
+                     │
+                     ▼
+          Candidate Global Pose
+                     │
+                     ▼
+             ICP Scan Alignment
+                     │
+                     ▼
+          Estimated Global Pose
+                     │
+                     ▼
+      Localization Recovery (map→odom)
+```
 
-Here is a closer look:
+---
 
-### Robot Position
-![Robot-Position](/media/screenshots/position_2.png)
+# Repository Structure
 
-### Estimated Pose
-![Esimtated Pose](/media/screenshots/result_2.png)
+```
+lidar-global-relocalization/
 
+├── config/
+│   └── config.yaml
+│
+├── global_localizer/
+│   ├── descriptor_database.py
+│   ├── icp_registration.py
+│   ├── localization.py
+│   └── ...
+│
+├── maps/
+│   ├── aws_house_map.pgm
+│   └── aws_house_map.png
+│
+├── media/
+│   ├── screenshots/
+│   ├── output1.gif
+│   ├── output2.gif
+│   └── output3.gif
+│
+├── resource/
+├── test/
+│
+├── package.xml
+├── setup.py
+└── README.md
+```
 
-## Contributing
+---
 
-Contributions to the Global Localizer package are welcome! If you encounter any issues or have suggestions for improvements, please open an issue on the [GitHub repository](https://github.com/saadi-tech/kidnapped_robot_finder).
+# Internship Contributions
 
+Compared to the original repository, the following major modifications were introduced.
+
+## Simulation Environment
+
+- Migrated to AWS Small House World
+- Generated new occupancy grid maps
+- Updated map server configuration
+- Created new testing routes
+
+---
+
+## Localization
+
+- Updated localization parameters
+- Improved descriptor search configuration
+- Tuned ICP registration
+- Improved recovery robustness
+
+---
+
+## Experimental Evaluation
+
+- Performed repeated kidnapped robot experiments
+- Validated localization recovery
+- Verified odometry consistency
+- Recorded recovery behaviour
+- Analysed localization stability
+
+---
+
+## Documentation
+
+- Complete repository restructuring
+- Experimental media
+- Updated launch workflow
+- Hardware deployment guide
+- Result documentation
+
+---
+
+# Running the Package
+
+## 1. Clone
+
+```bash
+git clone https://github.com/Goutham-IITJ/lidar-global-relocalization.git
+
+cd lidar-global-relocalization
+```
+
+---
+
+## 2. Build
+
+```bash
+colcon build --symlink-install
+
+source install/setup.bash
+```
+
+---
+
+## 3. Launch Gazebo
+
+```bash
+ros2 launch gazebo_ros gazebo.launch.py
+```
+
+---
+
+## 4. Start Localization
+
+```bash
+ros2 run global_localizer localization_node
+```
+
+---
+
+# Kidnapped Robot Evaluation Procedure
+
+The evaluation follows the standard kidnapped robot protocol.
+
+1. Localize the robot.
+2. Teleoperate normally.
+3. Physically move the robot to a different location.
+4. Keep odometry unchanged.
+5. Allow descriptor matching.
+6. Observe map→odom correction.
+7. Verify localization recovery.
+
+---
+
+# Experimental Results
+
+## Generated Map
+
+<p align="center">
+<img src="media/screenshots/generated_map.png" width="700">
+</p>
+
+---
+
+## Localization
+
+<p align="center">
+<img src="media/screenshots/localization.png" width="700">
+</p>
+
+---
+
+## Kidnapped Robot Recovery
+
+<p align="center">
+<img src="media/output1.gif" width="700">
+</p>
+
+---
+
+# Example Recovery
+
+During kidnapped robot experiments
+
+- Robot odometry remained locally continuous.
+- Descriptor matching produced candidate global poses.
+- ICP refined the pose estimate.
+- The **map→odom transform** was updated.
+- Localization recovered without resetting odometry.
+
+This confirms true global relocalization instead of odometry teleportation.
+
+---
+
+# Evaluation Metrics
+
+Experiments evaluate
+
+- Recovery Success Rate
+- Recovery Time
+- Descriptor Matching Robustness
+- ICP Convergence
+- Localization Stability
+- Transform Consistency
+- Kidnapped Robot Recovery Accuracy
+
+---
+
+# Applications
+
+This work is applicable to
+
+- Indoor Service Robots
+- Warehouse Robots
+- Hospital Robots
+- Delivery Robots
+- Autonomous Mobile Robots (AMRs)
+
+---
+
+# Future Work
+
+- Multi-session descriptor database
+- Faster nearest-neighbour search
+- RGB + LiDAR hybrid localization
+- Semantic place recognition
+- Large-scale environment support
+
+---
+
+# Related Work
+
+During the internship, a second localization pipeline based on
+
+- Monocular RGB Camera
+- 3D LiDAR
+- RTAB-Map
+
+was also developed and evaluated.
+
+Repository:
+
+**rtabmap-rgb-3dlidar-relocalization**
+
+---
+
+# Acknowledgements
+
+This work extends the original LiDAR global localization framework developed by **Saad Waqar**.
+
+The repository was significantly modified and experimentally evaluated during my Robotics Internship at **ugo Inc., Tokyo, Japan** to support realistic kidnapped robot recovery experiments in the AWS Small House environment.
+
+---
+
+# Author
+
+**Goutham A. S.**
+
+B.Tech Electrical Engineering
+
+Indian Institute of Technology Jodhpur
+
+Robotics | SLAM | Localization | Autonomous Navigation
+
+GitHub: https://github.com/Goutham-IITJ
